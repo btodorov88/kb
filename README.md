@@ -12,11 +12,28 @@ A personal web app for keeping summaries of books you've read and reviewing them
 ## Running
 ```sh
 npm install
-npm run dev     # http://localhost:5180
-npm run build   # production build in dist/
+npm run dev     # app on http://localhost:5180, API on :5181 (proxied under /api)
+npm start       # production: serves the built app + API on http://localhost:5180 (run `npm run build` first)
 ```
 
 ## How it works
-- Vite + React + TypeScript, react-router for pages, react-markdown for summaries.
-- Data is stored in the browser's IndexedDB via Dexie (`src/db.ts`). There's no server, so data stays
-  on this browser only. Use **Export** for backups or to move to another device.
+- **Client** (`src/`): Vite + React + TypeScript, react-router for pages, react-markdown for summaries.
+  `src/api.ts` talks to the server and keeps the book list in memory.
+- **Server** (`server/`): Express API storing books in SQLite at `data/book-notes.db` (git-ignored).
+  Uses Node's built-in `node:sqlite`. On Node 23 this needs `--experimental-sqlite`, which the npm
+  scripts pass for you.
+- **Backups**: copy `data/book-notes.db`, or use **Export** in the app for a portable JSON file.
+- Books saved by older versions in the browser (IndexedDB) are moved into the database
+  automatically the first time the app opens (`src/migrateBrowserData.ts`).
+
+## API
+| Method | Path | |
+|---|---|---|
+| GET | `/api/books` | all books |
+| GET | `/api/books/:id` | one book |
+| POST | `/api/books` | create |
+| PUT | `/api/books/:id` | replace |
+| DELETE | `/api/books/:id` | delete |
+| POST | `/api/books/:id/reviewed` | set last-reviewed to now |
+| GET | `/api/export` | JSON backup |
+| POST | `/api/import` | restore a backup (same book → updated, otherwise added) |

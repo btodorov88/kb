@@ -1,14 +1,13 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db, exportJson, importJson, matchesQuery, STATUS_LABELS, type ReadingStatus } from '../db.ts'
+import { exportJson, importBooks, matchesQuery, STATUS_LABELS, useBooks, type ReadingStatus } from '../api.ts'
 import Cover from '../components/Cover.tsx'
 import Stars from '../components/Stars.tsx'
 
 type SortKey = 'updated' | 'title' | 'rating' | 'finished'
 
 export default function Library() {
-  const books = useLiveQuery(() => db.books.toArray())
+  const { books } = useBooks()
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState('')
   const [status, setStatus] = useState<ReadingStatus | ''>('')
@@ -45,8 +44,8 @@ export default function Library() {
 
   async function handleImport(file: File) {
     try {
-      const count = await importJson(await file.text())
-      setMessage(`Imported ${count} book${count === 1 ? '' : 's'}.`)
+      const { added, updated } = await importBooks(JSON.parse(await file.text()))
+      setMessage(`Import done: ${added} added, ${updated} updated.`)
     } catch (err) {
       setMessage(`Import failed: ${(err as Error).message}`)
     }
@@ -135,7 +134,7 @@ export default function Library() {
       </ul>
 
       <footer className="backup">
-        <span className="muted small">Your notes are stored in this browser only. Export regularly as a backup.</span>
+        <span className="muted small">Notes are saved in data/book-notes.db. Export makes a portable JSON backup.</span>
         <div>
           <button onClick={handleExport}>Export</button>
           <button onClick={() => fileInput.current?.click()}>Import</button>

@@ -76,6 +76,11 @@ button.link { border: none; background: none; padding: 0; color: var(--accent); 
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .empty { text-align: center; padding: 60px 16px; }
 
+.banner { background: var(--accent-soft); border-radius: 8px; padding: 10px 14px; margin: 0 0 16px; }
+.banner.error, .error-text { color: var(--danger); }
+.banner.error { background: transparent; border: 1px solid var(--danger); }
+.error-text { align-self: center; }
+
 /* Library */
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .toolbar input { min-width: 200px; }

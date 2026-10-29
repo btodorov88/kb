@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db, markReviewed, type Book } from '../db.ts'
+import { markReviewed, useBooks, type Book } from '../api.ts'
 import Cover from '../components/Cover.tsx'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -11,7 +10,7 @@ const DAY = 24 * 60 * 60 * 1000
  * A book counts as "due" if it was never reviewed or not reviewed in the last 30 days.
  */
 export default function Review() {
-  const books = useLiveQuery(() => db.books.toArray())
+  const { books } = useBooks()
   const [revealed, setRevealed] = useState(false)
   const [skipped, setSkipped] = useState<number[]>([])
   const [now] = useState(() => Date.now())

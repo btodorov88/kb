@@ -1,4 +1,4 @@
-import type { Book } from '../db.ts'
+import type { Book } from '../types.ts'
 
 export default function Cover({ book, size = 'md' }: { book: Pick<Book, 'title' | 'coverUrl'>; size?: 'sm' | 'md' }) {
   if (book.coverUrl) {

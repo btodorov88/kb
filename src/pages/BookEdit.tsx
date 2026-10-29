@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Markdown from 'react-markdown'
-import { db, emptyDraft, saveBook, STATUS_LABELS, type BookDraft, type ReadingStatus } from '../db.ts'
+import { emptyDraft, getBook, saveBook, STATUS_LABELS, type BookDraft, type ReadingStatus } from '../api.ts'
 import { searchBooks, type BookLookupResult } from '../openLibrary.ts'
 import Stars from '../components/Stars.tsx'
 import Cover from '../components/Cover.tsx'
@@ -13,15 +13,17 @@ export default function BookEdit() {
   const [draft, setDraft] = useState<BookDraft | null>(id === undefined ? emptyDraft() : null)
   const [tagText, setTagText] = useState('')
   const [preview, setPreview] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     if (id === undefined) return
-    db.books.get(id).then((book) => {
-      if (!book) return navigate('/', { replace: true })
-      const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = book
-      setDraft(rest)
-      setTagText(book.tags.join(', '))
-    })
+    getBook(id)
+      .then((book) => {
+        const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = book
+        setDraft(rest)
+        setTagText(book.tags.join(', '))
+      })
+      .catch(() => navigate('/', { replace: true }))
   }, [id, navigate])
 
   if (!draft) return null
@@ -30,6 +32,7 @@ export default function BookEdit() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setSaveError('')
     const tags = [...new Set(tagText.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean))]
     const cleaned: BookDraft = {
       ...draft!,
@@ -39,8 +42,12 @@ export default function BookEdit() {
       takeaways: draft!.takeaways.map((t) => t.trim()).filter(Boolean),
       quotes: draft!.quotes.filter((q) => q.text.trim()),
     }
-    const savedId = await saveBook(cleaned, id)
-    navigate(`/books/${savedId}`)
+    try {
+      const savedId = await saveBook(cleaned, id)
+      navigate(`/books/${savedId}`)
+    } catch (err) {
+      setSaveError(`Couldn't save: ${(err as Error).message}`)
+    }
   }
 
   return (
@@ -192,6 +199,7 @@ export default function BookEdit() {
         <Link to={id === undefined ? '/' : `/books/${id}`} className="button">
           Cancel
         </Link>
+        {saveError && <span className="error-text">{saveError}</span>}
       </div>
     </form>
   )

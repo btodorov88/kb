@@ -1,22 +1,20 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
 import Markdown from 'react-markdown'
-import { db, markReviewed, STATUS_LABELS } from '../db.ts'
+import { deleteBook, markReviewed, STATUS_LABELS, useBook } from '../api.ts'
 import Cover from '../components/Cover.tsx'
 import Stars from '../components/Stars.tsx'
 
 export default function BookView() {
   const id = Number(useParams().id)
   const navigate = useNavigate()
-  // `null` = loaded but not found; `undefined` = still loading
-  const book = useLiveQuery(async () => (await db.books.get(id)) ?? null, [id])
+  const book = useBook(id)
 
   if (book === undefined) return null
   if (book === null) return <p>Book not found. <Link to="/">Back to library</Link></p>
 
   async function handleDelete() {
     if (!confirm(`Delete "${book!.title}"? This cannot be undone.`)) return
-    await db.books.delete(id)
+    await deleteBook(id)
     navigate('/')
   }
 
