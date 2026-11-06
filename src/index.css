@@ -28,9 +28,10 @@
   --shadow-lg: 0 2px 4px rgb(40 30 20 / 0.05), 0 12px 32px rgb(40 30 20 / 0.1);
 
   --page: 1120px;
-  /* Reading column: ~600px gives 65–70 characters per line for this font (best practice 45–75).
+  /* Reading column: ~780px gives ~90 characters per line for this font. Wider than the classic
+     45–75 guideline on purpose: the notes are dense study material with tables and code.
      Set in rem, not ch: ch is the width of "0", which misjudges Cyrillic text. */
-  --reading: 38rem;
+  --reading: 49rem;
   --toc: 240px;
   --gutter: 24px;
   --topbar-h: 60px;
@@ -378,7 +379,7 @@ details.panel > .panel-body { padding: 0 22px 20px; display: flex; flex-directio
 /* ============================================================
    Study
    ============================================================ */
-.study { max-width: 680px; margin: 0 auto; } /* keeps card answers near 65–70 characters per line */
+.study { max-width: 760px; margin: 0 auto; }
 .study-top { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 .study-title { min-width: 0; flex: 1; }
 .study-title .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
