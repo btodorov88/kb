@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import Markdown from 'react-markdown'
+import Markdown from '../components/Md.tsx'
 import { deleteBook, markReviewed, STATUS_LABELS, useBook } from '../api.ts'
 import Cover from '../components/Cover.tsx'
 import Stars from '../components/Stars.tsx'

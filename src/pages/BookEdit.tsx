@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import Markdown from 'react-markdown'
+import Markdown from '../components/Md.tsx'
 import { emptyDraft, getBook, saveBook, STATUS_LABELS, useBooks, type BookDraft, type ReadingStatus } from '../api.ts'
 import { searchBooks, type BookLookupResult } from '../openLibrary.ts'
 import Stars from '../components/Stars.tsx'

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import Markdown from 'react-markdown'
+import Markdown from '../components/Md.tsx'
 import { useBook } from '../api.ts'
 
 function shuffled(n: number): number[] {

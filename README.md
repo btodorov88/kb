@@ -20,6 +20,15 @@ npm run dev     # app on http://localhost:5180, API on :5181 (proxied under /api
 npm start       # production: serves the built app + API on http://localhost:5180 (run `npm run build` first)
 ```
 
+## Seed data
+`seed/utp-exam.json` holds the 6 PhD exam topics (Теми 6, 22, 14, 17, 16, 20 — билети 1–3) from
+`UTP-izpit-temi.pdf`, with notes, key takeaways and 137 flashcards. Load it into an empty library with
+**Import** in the app, or:
+```sh
+curl -X POST http://localhost:5180/api/import -H 'Content-Type: application/json' --data-binary @seed/utp-exam.json
+```
+Importing it twice adds the topics twice.
+
 ## How it works
 - **Client** (`src/`): Vite + React + TypeScript, react-router for pages, react-markdown for summaries.
   `src/api.ts` talks to the server and keeps the book list in memory.
