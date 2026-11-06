@@ -3,7 +3,11 @@
 A personal web app for keeping summaries of books you've read and reviewing them later.
 
 ## Features
-- **Library**: search across titles, summaries, takeaways and quotes. Filter by tag or status, and sort.
+- **Books and topics**: both are the same kind of entry. A topic just has no author or cover.
+- **Groups**: put entries in a group (e.g. "PhD exam"). The library lists them under group headings.
+- **Flashcards**: each entry has question/answer cards (Markdown). **Study** goes through all of an
+  entry's cards, shuffled or in order. Space/Enter flips and moves on, ← → move between cards. Nothing is tracked.
+- **Library**: search across titles, notes, quotes and flashcards. Filter by group, tag or status, and sort.
 - **Book pages**: Markdown summary, key takeaways, quotes with page numbers and notes, rating, reading dates.
 - **Auto-fill**: look up title, author and cover from Open Library when adding a book.
 - **Review**: shows books not reviewed in 30+ days. You try to recall the book first, then see your notes.

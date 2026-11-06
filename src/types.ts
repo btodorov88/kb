@@ -15,10 +15,17 @@ export interface Quote {
   note?: string
 }
 
+export interface Flashcard {
+  front: string // question (Markdown)
+  back: string // answer (Markdown)
+}
+
+/** A book or a study topic: both are the same kind of entry. */
 export interface Book {
   id: number
   title: string
-  author: string
+  author: string // author or source; may be empty for topics
+  group?: string // e.g. "PhD exam"; entries without one are "Ungrouped"
   coverUrl?: string
   status: ReadingStatus
   rating?: number // 1-5
@@ -28,6 +35,7 @@ export interface Book {
   summary: string // Markdown
   takeaways: string[]
   quotes: Quote[]
+  cards: Flashcard[]
   createdAt: number
   updatedAt: number
   lastReviewedAt?: number

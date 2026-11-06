@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Markdown from 'react-markdown'
-import { emptyDraft, getBook, saveBook, STATUS_LABELS, type BookDraft, type ReadingStatus } from '../api.ts'
+import { emptyDraft, getBook, saveBook, STATUS_LABELS, useBooks, type BookDraft, type ReadingStatus } from '../api.ts'
 import { searchBooks, type BookLookupResult } from '../openLibrary.ts'
 import Stars from '../components/Stars.tsx'
 import Cover from '../components/Cover.tsx'
@@ -14,6 +14,8 @@ export default function BookEdit() {
   const [tagText, setTagText] = useState('')
   const [preview, setPreview] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const { books } = useBooks()
+  const groups = [...new Set((books ?? []).map((b) => b.group).filter(Boolean))] as string[]
 
   useEffect(() => {
     if (id === undefined) return
@@ -41,6 +43,7 @@ export default function BookEdit() {
       tags,
       takeaways: draft!.takeaways.map((t) => t.trim()).filter(Boolean),
       quotes: draft!.quotes.filter((q) => q.text.trim()),
+      cards: draft!.cards.filter((c) => c.front.trim() || c.back.trim()).map((c) => ({ ...c, front: c.front.trim() || '?' })),
     }
     try {
       const savedId = await saveBook(cleaned, id)
@@ -52,7 +55,7 @@ export default function BookEdit() {
 
   return (
     <form className="edit-form" onSubmit={handleSubmit}>
-      <h1>{id === undefined ? 'Add a book' : 'Edit book'}</h1>
+      <h1>{id === undefined ? 'Add a book or topic' : `Edit ${draft.title || 'entry'}`}</h1>
 
       {id === undefined && (
         <BookLookup
@@ -68,8 +71,22 @@ export default function BookEdit() {
             <input required value={draft.title} onChange={(e) => set('title', e.target.value)} />
           </label>
           <label>
-            Author
+            Author / source <span className="muted small">(optional)</span>
             <input value={draft.author} onChange={(e) => set('author', e.target.value)} />
+          </label>
+          <label>
+            Group <span className="muted small">(e.g. PhD exam)</span>
+            <input
+              list="group-options"
+              value={draft.group ?? ''}
+              onChange={(e) => set('group', e.target.value || undefined)}
+              placeholder="No group"
+            />
+            <datalist id="group-options">
+              {groups.map((g) => (
+                <option key={g} value={g} />
+              ))}
+            </datalist>
           </label>
           <label>
             Cover image URL
@@ -119,7 +136,7 @@ export default function BookEdit() {
 
       <fieldset>
         <legend>Key takeaways</legend>
-        <p className="muted small">The 3–5 ideas you most want to remember. These show up in Review.</p>
+        <p className="muted small">The main ideas you most want to remember. These show up in Review.</p>
         {draft.takeaways.map((t, i) => (
           <div key={i} className="row">
             <input
@@ -128,6 +145,14 @@ export default function BookEdit() {
               onChange={(e) => set('takeaways', draft.takeaways.map((x, j) => (j === i ? e.target.value : x)))}
               placeholder={`Takeaway ${i + 1}`}
             />
+            <button
+              type="button"
+              title="Add a flashcard with this as the answer"
+              disabled={!t.trim()}
+              onClick={() => set('cards', [...draft.cards, { front: '', back: t.trim() }])}
+            >
+              Make card
+            </button>
             <button type="button" onClick={() => set('takeaways', draft.takeaways.filter((_, j) => j !== i))}>
               Remove
             </button>
@@ -192,6 +217,28 @@ export default function BookEdit() {
         </button>
       </fieldset>
 
+      <fieldset>
+        <legend>Flashcards</legend>
+        <p className="muted small">Question on the front, answer on the back. Both support Markdown.</p>
+        {draft.cards.map((c, i) => {
+          const update = (patch: Partial<typeof c>) =>
+            set('cards', draft.cards.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+          return (
+            <div key={i} className="card-edit">
+              <span className="muted small card-num">{i + 1}</span>
+              <textarea rows={2} value={c.front} onChange={(e) => update({ front: e.target.value })} placeholder="Question" />
+              <textarea rows={2} value={c.back} onChange={(e) => update({ back: e.target.value })} placeholder="Answer" />
+              <button type="button" onClick={() => set('cards', draft.cards.filter((_, j) => j !== i))}>
+                Remove
+              </button>
+            </div>
+          )
+        })}
+        <button type="button" onClick={() => set('cards', [...draft.cards, { front: '', back: '' }])}>
+          + Add flashcard
+        </button>
+      </fieldset>
+
       <div className="actions sticky">
         <button type="submit" className="primary">
           Save
@@ -232,7 +279,7 @@ function BookLookup({ onPick }: { onPick: (r: BookLookupResult) => void }) {
   return (
     <div className="lookup">
       <label>
-        Find book details <span className="muted small">(via Open Library — optional)</span>
+        Find book details <span className="muted small">(via Open Library — optional, skip for topics)</span>
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by title or author…" />
       </label>
       {state === 'loading' && <p className="muted small">Searching…</p>}

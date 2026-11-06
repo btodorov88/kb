@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { exportJson, importBooks, matchesQuery, STATUS_LABELS, useBooks, type ReadingStatus } from '../api.ts'
+import { exportJson, importBooks, matchesQuery, STATUS_LABELS, useBooks, type Book, type ReadingStatus } from '../api.ts'
 import Cover from '../components/Cover.tsx'
 import Stars from '../components/Stars.tsx'
 
@@ -10,6 +10,7 @@ export default function Library() {
   const { books } = useBooks()
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState('')
+  const [group, setGroup] = useState('')
   const [status, setStatus] = useState<ReadingStatus | ''>('')
   const [sort, setSort] = useState<SortKey>('updated')
   const [message, setMessage] = useState('')
@@ -20,9 +21,18 @@ export default function Library() {
     [books],
   )
 
+  const allGroups = useMemo(
+    () => [...new Set((books ?? []).map((b) => b.group).filter(Boolean))].sort() as string[],
+    [books],
+  )
+
   const visible = useMemo(() => {
     const list = (books ?? []).filter(
-      (b) => (!tag || b.tags.includes(tag)) && (!status || b.status === status) && matchesQuery(b, query),
+      (b) =>
+        (!group || (b.group ?? '') === group) &&
+        (!tag || b.tags.includes(tag)) &&
+        (!status || b.status === status) &&
+        matchesQuery(b, query),
     )
     const sorters: Record<SortKey, (a: (typeof list)[0], b: (typeof list)[0]) => number> = {
       updated: (a, b) => b.updatedAt - a.updatedAt,
@@ -31,7 +41,15 @@ export default function Library() {
       finished: (a, b) => (b.finishedAt ?? '').localeCompare(a.finishedAt ?? ''),
     }
     return list.sort(sorters[sort])
-  }, [books, query, tag, status, sort])
+  }, [books, query, group, tag, status, sort])
+
+  // Named groups alphabetically, ungrouped entries last
+  const sections = useMemo(() => {
+    const map = new Map<string, Book[]>()
+    for (const b of visible) map.set(b.group ?? '', [...(map.get(b.group ?? '') ?? []), b])
+    return [...map].sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)))
+  }, [visible])
+  const showHeadings = allGroups.length > 0
 
   async function handleExport() {
     const blob = new Blob([await exportJson()], { type: 'application/json' })
@@ -57,9 +75,9 @@ export default function Library() {
     return (
       <div className="empty">
         <h1>Your library is empty</h1>
-        <p>Add the first book you want to remember.</p>
+        <p>Add a book you've read or a topic you're studying.</p>
         <Link to="/books/new" className="button primary">
-          + Add book
+          + Add
         </Link>
         <p className="muted small">
           Have a backup?{' '}
@@ -84,6 +102,16 @@ export default function Library() {
           className="grow"
           autoFocus
         />
+        {allGroups.length > 0 && (
+          <select value={group} onChange={(e) => setGroup(e.target.value)} aria-label="Group">
+            <option value="">All groups</option>
+            {allGroups.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        )}
         <select value={status} onChange={(e) => setStatus(e.target.value as ReadingStatus | '')}>
           <option value="">All statuses</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => (
@@ -114,24 +142,38 @@ export default function Library() {
       )}
 
       <p className="muted small">
-        {visible.length} of {books.length} books
+        {visible.length} of {books.length} entries
       </p>
 
-      <ul className="book-grid">
-        {visible.map((b) => (
-          <li key={b.id}>
-            <Link to={`/books/${b.id}`} className="book-card">
-              <Cover book={b} />
-              <div>
-                <strong>{b.title}</strong>
-                <div className="muted">{b.author}</div>
-                <Stars value={b.rating} />
-                {b.takeaways[0] && <p className="small clamp">{b.takeaways[0]}</p>}
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {sections.map(([name, list]) => (
+        <section key={name} className="group-section">
+          {showHeadings && (
+            <h2 className="group-heading">
+              {name || 'Ungrouped'} <span className="muted small">{list.length}</span>
+            </h2>
+          )}
+          <ul className="book-grid">
+            {list.map((b) => (
+              <li key={b.id}>
+                <Link to={`/books/${b.id}`} className="book-card">
+                  <Cover book={b} />
+                  <div>
+                    <strong>{b.title}</strong>
+                    {b.author && <div className="muted">{b.author}</div>}
+                    <Stars value={b.rating} />
+                    {b.takeaways[0] && <p className="small clamp">{b.takeaways[0]}</p>}
+                    {b.cards.length > 0 && (
+                      <p className="small muted">
+                        🗂 {b.cards.length} flashcard{b.cards.length === 1 ? '' : 's'}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
 
       <footer className="backup">
         <span className="muted small">Notes are saved in data/book-notes.db. Export makes a portable JSON backup.</span>

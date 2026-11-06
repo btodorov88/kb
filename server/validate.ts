@@ -1,4 +1,4 @@
-import { STATUS_LABELS, type Book, type BookDraft, type Quote, type ReadingStatus } from '../src/types.ts'
+import { STATUS_LABELS, type Book, type BookDraft, type Flashcard, type Quote, type ReadingStatus } from '../src/types.ts'
 
 export class ValidationError extends Error {}
 
@@ -50,9 +50,19 @@ export function parseDraft(body: unknown): BookDraft {
     }
   })
 
+  if (body.cards !== undefined && !Array.isArray(body.cards)) throw new ValidationError('cards must be a list')
+  const cards: Flashcard[] = ((body.cards as unknown[]) ?? []).map((c, i) => {
+    if (!isObj(c)) throw new ValidationError(`cards[${i}] must be an object`)
+    return {
+      front: str(c.front, `cards[${i}].front`, { required: true })!,
+      back: str(c.back, `cards[${i}].back`) ?? '',
+    }
+  })
+
   return {
     title: str(body.title, 'title', { required: true, max: 500 })!.trim(),
     author: str(body.author, 'author', { max: 500 })?.trim() ?? '',
+    group: str(body.group, 'group', { max: 200 })?.trim() || undefined,
     coverUrl: str(body.coverUrl, 'coverUrl', { max: 2000 }),
     status,
     rating,
@@ -62,6 +72,7 @@ export function parseDraft(body: unknown): BookDraft {
     summary: str(body.summary, 'summary') ?? '',
     takeaways: strArray(body.takeaways, 'takeaways'),
     quotes,
+    cards,
     lastReviewedAt: num(body.lastReviewedAt, 'lastReviewedAt'),
   }
 }

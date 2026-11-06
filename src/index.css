@@ -149,6 +149,40 @@ fieldset > button { align-self: flex-start; }
 .lookup-results { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; }
 .lookup-results button { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; white-space: normal; }
 
+/* Groups */
+.group-section + .group-section { margin-top: 8px; }
+.group-heading { font-size: 1.05rem; margin: 20px 0 10px; }
+.group-label { background: var(--accent-soft); color: var(--text); border-radius: 999px; padding: 1px 10px; font-size: 0.86rem; }
+
+/* Flashcards: editing and listing */
+.card-edit { display: grid; grid-template-columns: auto 1fr 1fr auto; gap: 8px; align-items: start; }
+.card-edit textarea { font-family: inherit; }
+.card-num { padding-top: 10px; min-width: 1.5em; text-align: right; }
+.card-list > div { border-top: 1px solid var(--border); padding: 8px 0; }
+.card-list dt { font-weight: 600; }
+.card-list dd { margin: 0; color: var(--muted); }
+.card-list p { margin: 0.2em 0; }
+
+/* Study */
+.study { max-width: 680px; margin: 0 auto; }
+.study-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.check { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.progress { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 16px; }
+.progress div { height: 100%; background: var(--accent); transition: width 0.2s; }
+.center { text-align: center; justify-content: center; }
+.flashcard {
+  display: block; width: 100%; min-height: 260px; padding: 28px 32px; text-align: left; white-space: normal;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; font-size: 1.1rem;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+}
+.flashcard:hover { border-color: var(--accent); }
+.flashcard .side > :first-child { margin-top: 0; }
+.flashcard .side > :last-child { margin-bottom: 0; }
+.flashcard .answer { border-top: 1px dashed var(--border); margin-top: 20px; padding-top: 20px; }
+.flashcard .hint { margin-top: 40px; text-align: center; }
+.flashcard.done { text-align: center; cursor: default; display: flex; flex-direction: column; justify-content: center; }
+button:disabled { opacity: 0.45; cursor: default; }
+
 /* Review */
 .review { max-width: 640px; margin: 0 auto; }
 .review-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
@@ -158,4 +192,7 @@ fieldset > button { align-self: flex-start; }
   .book-header { flex-direction: column; gap: 12px; }
   .row:not(.wrap) { flex-wrap: wrap; }
   .toolbar select { flex: 1; }
+  .card-edit { grid-template-columns: 1fr; }
+  .card-num { display: none; }
+  .flashcard { padding: 20px; min-height: 200px; }
 }

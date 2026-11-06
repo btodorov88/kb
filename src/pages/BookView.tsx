@@ -24,7 +24,13 @@ export default function BookView() {
         <Cover book={book} />
         <div className="grow">
           <h1>{book.title}</h1>
-          <p className="muted">{book.author}</p>
+          {(book.author || book.group) && (
+            <p className="muted">
+              {book.author}
+              {book.author && book.group && ' · '}
+              {book.group && <span className="group-label">{book.group}</span>}
+            </p>
+          )}
           <Stars value={book.rating} />
           <p className="small muted">
             {STATUS_LABELS[book.status]}
@@ -45,6 +51,11 @@ export default function BookView() {
             <Link to={`/books/${id}/edit`} className="button primary">
               Edit
             </Link>
+            {book.cards.length > 0 && (
+              <Link to={`/books/${id}/study`} className="button">
+                Study {book.cards.length} flashcard{book.cards.length === 1 ? '' : 's'}
+              </Link>
+            )}
             <button onClick={() => markReviewed(id)}>Mark reviewed</button>
             <button className="danger" onClick={handleDelete}>
               Delete
@@ -86,7 +97,28 @@ export default function BookView() {
         </section>
       )}
 
-      {!book.summary.trim() && book.takeaways.length === 0 && book.quotes.length === 0 && (
+      {book.cards.length > 0 && (
+        <section>
+          <h2>Flashcards</h2>
+          <details>
+            <summary className="muted small">Show all {book.cards.length} (questions and answers)</summary>
+            <dl className="card-list">
+              {book.cards.map((c, i) => (
+                <div key={i}>
+                  <dt className="prose">
+                    <Markdown>{c.front}</Markdown>
+                  </dt>
+                  <dd className="prose">
+                    <Markdown>{c.back}</Markdown>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </details>
+        </section>
+      )}
+
+      {!book.summary.trim() && book.takeaways.length === 0 && book.quotes.length === 0 && book.cards.length === 0 && (
         <p className="muted">
           No notes yet. <Link to={`/books/${id}/edit`}>Add a summary</Link>.
         </p>

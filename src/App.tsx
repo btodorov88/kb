@@ -6,6 +6,7 @@ import Library from './pages/Library.tsx'
 import BookView from './pages/BookView.tsx'
 import BookEdit from './pages/BookEdit.tsx'
 import Review from './pages/Review.tsx'
+import Study from './pages/Study.tsx'
 
 export default function App() {
   const { error } = useBooks()
@@ -29,7 +30,7 @@ export default function App() {
           </NavLink>
           <NavLink to="/review">Review</NavLink>
           <NavLink to="/books/new" className="button primary">
-            + Add book
+            + Add
           </NavLink>
         </nav>
       </header>
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/books/new" element={<BookEdit />} />
           <Route path="/books/:id" element={<BookView />} />
           <Route path="/books/:id/edit" element={<BookEdit />} />
+          <Route path="/books/:id/study" element={<Study />} />
           <Route path="*" element={<p>Page not found.</p>} />
         </Routes>
       </main>

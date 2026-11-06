@@ -93,20 +93,23 @@ export function emptyDraft(): BookDraft {
     summary: '',
     takeaways: [],
     quotes: [],
+    cards: [],
   }
 }
 
-/** True if the book matches every word of the query (title, author, tags, summary, takeaways, quotes). */
+/** True if the entry matches every word of the query (title, author, group, tags, notes, quotes, cards). */
 export function matchesQuery(book: Book, query: string): boolean {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   if (words.length === 0) return true
   const haystack = [
     book.title,
     book.author,
+    book.group ?? '',
     book.tags.join(' '),
     book.summary,
     book.takeaways.join(' '),
     book.quotes.map((q) => `${q.text} ${q.note ?? ''}`).join(' '),
+    book.cards.map((c) => `${c.front} ${c.back}`).join(' '),
   ]
     .join(' ')
     .toLowerCase()

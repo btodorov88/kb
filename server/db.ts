@@ -28,6 +28,16 @@ db.exec(`
   );
 `)
 
+// Columns added after the first release. Add new ones here; existing databases get them on startup.
+const ADDED_COLUMNS: Record<string, string> = {
+  group_name: 'TEXT',
+  cards: "TEXT NOT NULL DEFAULT '[]'", // JSON array of {front, back}
+}
+const existing = new Set((db.prepare('PRAGMA table_info(books)').all() as { name: string }[]).map((c) => c.name))
+for (const [name, type] of Object.entries(ADDED_COLUMNS)) {
+  if (!existing.has(name)) db.exec(`ALTER TABLE books ADD COLUMN ${name} ${type}`)
+}
+
 export { DB_PATH }
 
 type Row = Record<string, string | number | null>
@@ -37,6 +47,7 @@ function fromRow(r: Row): Book {
     id: r.id as number,
     title: r.title as string,
     author: r.author as string,
+    group: (r.group_name as string) ?? undefined,
     coverUrl: (r.cover_url as string) ?? undefined,
     status: r.status as ReadingStatus,
     rating: (r.rating as number) ?? undefined,
@@ -46,6 +57,7 @@ function fromRow(r: Row): Book {
     summary: r.summary as string,
     takeaways: JSON.parse(r.takeaways as string),
     quotes: JSON.parse(r.quotes as string),
+    cards: JSON.parse(r.cards as string),
     createdAt: r.created_at as number,
     updatedAt: r.updated_at as number,
     lastReviewedAt: (r.last_reviewed_at as number) ?? undefined,
@@ -56,6 +68,7 @@ function toParams(d: BookDraft) {
   return {
     title: d.title,
     author: d.author,
+    group_name: d.group ?? null,
     cover_url: d.coverUrl ?? null,
     status: d.status,
     rating: d.rating ?? null,
@@ -65,12 +78,13 @@ function toParams(d: BookDraft) {
     summary: d.summary,
     takeaways: JSON.stringify(d.takeaways),
     quotes: JSON.stringify(d.quotes),
+    cards: JSON.stringify(d.cards),
     last_reviewed_at: d.lastReviewedAt ?? null,
   }
 }
 
 const COLUMNS =
-  'title, author, cover_url, status, rating, started_at, finished_at, tags, summary, takeaways, quotes, last_reviewed_at'
+  'title, author, group_name, cover_url, status, rating, started_at, finished_at, tags, summary, takeaways, quotes, cards, last_reviewed_at'
 const VALUES = COLUMNS.split(', ').map((c) => `:${c}`).join(', ')
 const SET = COLUMNS.split(', ').map((c) => `${c} = :${c}`).join(', ')
 
