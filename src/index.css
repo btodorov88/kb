@@ -28,7 +28,10 @@
   --shadow-lg: 0 2px 4px rgb(40 30 20 / 0.05), 0 12px 32px rgb(40 30 20 / 0.1);
 
   --page: 1120px;
-  --reading: 72ch;
+  /* Reading column: ~600px gives 65–70 characters per line for this font (best practice 45–75).
+     Set in rem, not ch: ch is the width of "0", which misjudges Cyrillic text. */
+  --reading: 38rem;
+  --toc: 240px;
   --gutter: 24px;
   --topbar-h: 60px;
 
@@ -277,8 +280,11 @@ button.chip:hover { border-color: var(--border-strong); color: var(--text); }
 .entry-meta .dot::before { content: '·'; margin: 0 2px; }
 .entry-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-.entry-layout { display: grid; gap: 40px; grid-template-columns: minmax(0, 1fr) 240px; align-items: start; }
-.entry-layout > article { min-width: 0; max-width: var(--reading); }
+/* The page is centered as a unit: reading column + gap + table of contents */
+.entry-page { max-width: calc(var(--reading) + 48px + var(--toc)); margin: 0 auto; }
+.entry-header > .grow { max-width: var(--reading); }
+.entry-layout { display: grid; gap: 48px; grid-template-columns: minmax(0, var(--reading)) var(--toc); align-items: start; }
+.entry-layout > article { min-width: 0; }
 .toc { position: sticky; top: calc(var(--topbar-h) + 24px); max-height: calc(100vh - var(--topbar-h) - 48px); overflow-y: auto; font-size: 0.875rem; }
 .toc-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 10px; }
 .toc ol { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--border); }
@@ -372,7 +378,7 @@ details.panel > .panel-body { padding: 0 22px 20px; display: flex; flex-directio
 /* ============================================================
    Study
    ============================================================ */
-.study { max-width: 760px; margin: 0 auto; }
+.study { max-width: 680px; margin: 0 auto; } /* keeps card answers near 65–70 characters per line */
 .study-top { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 .study-title { min-width: 0; flex: 1; }
 .study-title .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -410,6 +416,7 @@ details.panel > .panel-body { padding: 0 22px 20px; display: flex; flex-directio
    Responsive
    ============================================================ */
 @media (max-width: 960px) {
+  .entry-page { max-width: var(--reading); }
   .entry-layout { grid-template-columns: minmax(0, 1fr); }
   .toc { display: none; }
 }

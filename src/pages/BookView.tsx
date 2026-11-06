@@ -48,7 +48,7 @@ function Entry({ book }: { book: Book }) {
   const empty = !hasNotes && !book.takeaways.length && !book.quotes.length && !book.cards.length
 
   return (
-    <>
+    <div className="entry-page">
       <nav className="crumbs" aria-label="Breadcrumb">
         <Link to="/">Library</Link>
         {book.group && (
@@ -174,7 +174,7 @@ function Entry({ book }: { book: Book }) {
           </aside>
         )}
       </div>
-    </>
+    </div>
   )
 }
 
