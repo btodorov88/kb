@@ -77,7 +77,6 @@ export async function saveBook(draft: BookDraft, id?: number): Promise<number> {
 
 export const getBook = (id: number) => request<Book>('GET', `/books/${id}`)
 export const deleteBook = (id: number) => mutate(request<void>('DELETE', `/books/${id}`))
-export const markReviewed = (id: number) => mutate(request<Book>('POST', `/books/${id}/reviewed`))
 export const exportJson = async () => JSON.stringify(await request('GET', '/export'), null, 2)
 export const importBooks = (data: unknown) =>
   mutate(request<{ added: number; updated: number }>('POST', '/import', data))

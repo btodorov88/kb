@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import Markdown from '../components/Md.tsx'
 import { useBook } from '../api.ts'
+import Icon from '../components/Icon.tsx'
 
 function shuffled(n: number): number[] {
   const order = [...Array(n).keys()]
@@ -15,6 +16,7 @@ function shuffled(n: number): number[] {
 /** Goes through every flashcard of one entry. Nothing is recorded. */
 export default function Study() {
   const id = Number(useParams().id)
+  const navigate = useNavigate()
   const book = useBook(id)
   const count = book?.cards.length ?? 0
 
@@ -48,31 +50,47 @@ export default function Study() {
     [count],
   )
 
-  // Keyboard: Space/Enter flips (or goes on once flipped), ← → move between cards
+  // Space/Enter: show answer, then next · ←/→: previous/next · Esc: leave
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, button')) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select')) return
       if (e.key === ' ' || e.key === 'Enter') {
+        // A focused button/link handles Space/Enter itself; acting here too would skip a card
+        if (e.target instanceof HTMLElement && e.target.closest('button, a')) return
         e.preventDefault()
-        if (done) return
-        if (flipped) go(1)
+        if (done) restart(shuffle)
+        else if (flipped) go(1)
         else setFlipped(true)
       } else if (e.key === 'ArrowRight') go(1)
       else if (e.key === 'ArrowLeft') go(-1)
+      else if (e.key === 'Escape') navigate(`/books/${id}`)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [flipped, done, go])
+  }, [flipped, done, go, restart, shuffle, navigate, id])
 
   if (book === undefined) return null
-  if (book === null) return <p>Not found. <Link to="/">Back to library</Link></p>
+  if (book === null) {
+    return (
+      <div className="empty">
+        <h1>Entry not found</h1>
+        <Link to="/" className="btn">
+          Back to library
+        </Link>
+      </div>
+    )
+  }
 
   if (count === 0) {
     return (
       <div className="empty">
+        <div className="empty-icon" aria-hidden>
+          🗂
+        </div>
         <h1>No flashcards yet</h1>
-        <p>{book.title} doesn't have any cards.</p>
-        <Link to={`/books/${id}/edit`} className="button primary">
+        <p>Add questions and answers to “{book.title}” to study them here.</p>
+        <Link to={`/books/${id}/edit`} className="btn btn-primary">
           Add flashcards
         </Link>
       </div>
@@ -80,17 +98,21 @@ export default function Study() {
   }
 
   const card = book.cards[order[pos]]
+  const shown = Math.min(pos + (flipped || done ? 1 : 0), count)
 
   return (
     <div className="study">
-      <header className="study-header">
-        <div>
-          <Link to={`/books/${id}`} className="small">
-            ← {book.title}
-          </Link>
-          {book.group && <span className="muted small"> · {book.group}</span>}
+      <div className="study-top">
+        <Link to={`/books/${id}`} className="btn btn-ghost btn-icon" aria-label="Exit study (Esc)" title="Exit (Esc)">
+          <Icon name="close" />
+        </Link>
+        <div className="study-title">
+          <div className="name" title={book.title}>
+            {book.title}
+          </div>
+          {book.group && <div className="sub">{book.group}</div>}
         </div>
-        <label className="small muted check">
+        <label className="switch" title="Shuffle the order of the cards">
           <input
             type="checkbox"
             checked={shuffle}
@@ -99,22 +121,41 @@ export default function Study() {
               restart(e.target.checked)
             }}
           />
-          Shuffle
+          <Icon name="shuffle" size={16} /> Shuffle
         </label>
-      </header>
+      </div>
 
-      <div className="progress" aria-hidden>
-        <div style={{ width: `${(Math.min(pos, count) / count) * 100}%` }} />
+      <div
+        className="progress"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={count}
+        aria-valuenow={shown}
+        aria-label="Cards seen"
+      >
+        <div style={{ width: `${(shown / count) * 100}%` }} />
+      </div>
+      <div className="progress-label">
+        <span>{done ? 'Finished' : `Card ${pos + 1} of ${count}`}</span>
+        {!done && pos > 0 && (
+          <button className="link-btn small" onClick={() => restart(shuffle)}>
+            Start over
+          </button>
+        )}
       </div>
 
       {done ? (
-        <div className="flashcard done">
-          <h2>All {count} cards done</h2>
-          <div className="actions center">
-            <button className="primary" onClick={() => restart(shuffle)}>
-              Go again
+        <div className="flashcard study-done">
+          <div className="big" aria-hidden>
+            🎉
+          </div>
+          <h2>You went through all {count} cards</h2>
+          <p className="muted">Go again to lock it in, or go back to the notes.</p>
+          <div className="study-controls">
+            <button className="btn btn-primary btn-lg" onClick={() => restart(shuffle)} autoFocus>
+              <Icon name="restart" /> Go again
             </button>
-            <Link to={`/books/${id}`} className="button">
+            <Link to={`/books/${id}`} className="btn btn-lg">
               Back to notes
             </Link>
           </div>
@@ -122,39 +163,54 @@ export default function Study() {
       ) : (
         card && (
           <>
-            <p className="muted small center">
-              Card {pos + 1} of {count}
-            </p>
             <button
               type="button"
-              className={`flashcard ${flipped ? 'flipped' : ''}`}
+              className="flashcard"
               onClick={() => (flipped ? go(1) : setFlipped(true))}
               aria-label={flipped ? 'Next card' : 'Show answer'}
+              aria-live="polite"
             >
-              <div className="side prose">
+              <div className="side-label">Question</div>
+              <div className="question prose">
                 <Markdown>{card.front}</Markdown>
               </div>
               {flipped ? (
-                <div className="side answer prose">
-                  {card.back.trim() ? <Markdown>{card.back}</Markdown> : <p className="muted">(no answer written)</p>}
+                <div className="answer">
+                  <div className="side-label">Answer</div>
+                  <div className="prose">
+                    {card.back.trim() ? <Markdown>{card.back}</Markdown> : <p className="muted">(no answer written)</p>}
+                  </div>
                 </div>
               ) : (
-                <p className="hint muted small">Click or press Space to show the answer</p>
+                <div className="tap-hint">Think of the answer, then tap to reveal it</div>
               )}
             </button>
-            <div className="actions center">
-              <button onClick={() => go(-1)} disabled={pos === 0}>
-                ← Previous
+
+            <div className="study-controls">
+              <button className="btn btn-lg" onClick={() => go(-1)} disabled={pos === 0}>
+                <Icon name="back" /> Previous
               </button>
               {flipped ? (
-                <button className="primary" onClick={() => go(1)}>
-                  Next →
+                <button className="btn btn-primary btn-lg" onClick={() => go(1)}>
+                  {pos + 1 === count ? 'Finish' : 'Next'} <Icon name="next" />
                 </button>
               ) : (
-                <button className="primary" onClick={() => setFlipped(true)}>
+                <button className="btn btn-primary btn-lg" onClick={() => setFlipped(true)}>
                   Show answer
                 </button>
               )}
+            </div>
+
+            <div className="shortcuts" aria-hidden>
+              <span>
+                <kbd>Space</kbd> reveal / next
+              </span>
+              <span>
+                <kbd>←</kbd> <kbd>→</kbd> move
+              </span>
+              <span>
+                <kbd>Esc</kbd> exit
+              </span>
             </div>
           </>
         )

@@ -38,7 +38,6 @@ export interface Book {
   cards: Flashcard[]
   createdAt: number
   updatedAt: number
-  lastReviewedAt?: number
 }
 
 /** The editable part of a book: what the client sends when creating or updating. */

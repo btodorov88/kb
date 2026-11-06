@@ -10,7 +10,6 @@ A personal web app for keeping summaries of books you've read and reviewing them
 - **Library**: search across titles, notes, quotes and flashcards. Filter by group, tag or status, and sort.
 - **Book pages**: Markdown summary, key takeaways, quotes with page numbers and notes, rating, reading dates.
 - **Auto-fill**: look up title, author and cover from Open Library when adding a book.
-- **Review**: shows books not reviewed in 30+ days. You try to recall the book first, then see your notes.
 - **Backup**: export and import everything as JSON.
 
 ## Running
@@ -47,6 +46,5 @@ Importing it twice adds the topics twice.
 | POST | `/api/books` | create |
 | PUT | `/api/books/:id` | replace |
 | DELETE | `/api/books/:id` | delete |
-| POST | `/api/books/:id/reviewed` | set last-reviewed to now |
 | GET | `/api/export` | JSON backup |
 | POST | `/api/import` | restore a backup (same book → updated, otherwise added) |

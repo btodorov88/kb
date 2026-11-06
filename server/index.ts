@@ -41,12 +41,6 @@ api.delete('/books/:id', (req, res) => {
   else res.status(404).json({ error: 'Book not found' })
 })
 
-api.post('/books/:id/reviewed', (req, res) => {
-  const book = books.markReviewed(idParam(req))
-  if (book) res.json(book)
-  else res.status(404).json({ error: 'Book not found' })
-})
-
 api.get('/export', (_req, res) => {
   const file: ExportFile = { version: 1, exportedAt: new Date().toISOString(), books: books.listBooks() }
   res.json(file)

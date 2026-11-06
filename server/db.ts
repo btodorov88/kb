@@ -24,7 +24,7 @@ db.exec(`
     quotes           TEXT    NOT NULL DEFAULT '[]', -- JSON array of {text, page?, note?}
     created_at       INTEGER NOT NULL,
     updated_at       INTEGER NOT NULL,
-    last_reviewed_at INTEGER
+    last_reviewed_at INTEGER -- no longer used (review tracking was removed)
   );
 `)
 
@@ -60,7 +60,6 @@ function fromRow(r: Row): Book {
     cards: JSON.parse(r.cards as string),
     createdAt: r.created_at as number,
     updatedAt: r.updated_at as number,
-    lastReviewedAt: (r.last_reviewed_at as number) ?? undefined,
   }
 }
 
@@ -79,12 +78,11 @@ function toParams(d: BookDraft) {
     takeaways: JSON.stringify(d.takeaways),
     quotes: JSON.stringify(d.quotes),
     cards: JSON.stringify(d.cards),
-    last_reviewed_at: d.lastReviewedAt ?? null,
   }
 }
 
 const COLUMNS =
-  'title, author, group_name, cover_url, status, rating, started_at, finished_at, tags, summary, takeaways, quotes, cards, last_reviewed_at'
+  'title, author, group_name, cover_url, status, rating, started_at, finished_at, tags, summary, takeaways, quotes, cards'
 const VALUES = COLUMNS.split(', ').map((c) => `:${c}`).join(', ')
 const SET = COLUMNS.split(', ').map((c) => `${c} = :${c}`).join(', ')
 
@@ -97,7 +95,6 @@ const stmts = {
   update: db.prepare(`UPDATE books SET ${SET}, updated_at = :updated_at WHERE id = :id`),
   restore: db.prepare(`UPDATE books SET ${SET}, updated_at = :updated_at WHERE id = :id AND created_at = :created_at`),
   remove: db.prepare('DELETE FROM books WHERE id = ?'),
-  reviewed: db.prepare('UPDATE books SET last_reviewed_at = ? WHERE id = ?'),
 }
 
 export function listBooks(): Book[] {
@@ -121,11 +118,6 @@ export function updateBook(id: number, d: BookDraft): Book | undefined {
 
 export function deleteBook(id: number): boolean {
   return stmts.remove.run(id).changes > 0
-}
-
-export function markReviewed(id: number): Book | undefined {
-  const { changes } = stmts.reviewed.run(Date.now(), id)
-  return changes ? getBook(id) : undefined
 }
 
 /**

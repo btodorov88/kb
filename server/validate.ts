@@ -73,7 +73,6 @@ export function parseDraft(body: unknown): BookDraft {
     takeaways: strArray(body.takeaways, 'takeaways'),
     quotes,
     cards,
-    lastReviewedAt: num(body.lastReviewedAt, 'lastReviewedAt'),
   }
 }
 

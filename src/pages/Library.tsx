@@ -1,61 +1,93 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { exportJson, importBooks, matchesQuery, STATUS_LABELS, useBooks, type Book, type ReadingStatus } from '../api.ts'
+import { exportJson, importBooks, matchesQuery, useBooks, type Book } from '../api.ts'
 import Cover from '../components/Cover.tsx'
 import Stars from '../components/Stars.tsx'
+import Icon from '../components/Icon.tsx'
 
-type SortKey = 'updated' | 'title' | 'rating' | 'finished'
+type SortKey = 'title' | 'updated' | 'rating'
+
+const SORT_LABELS: Record<SortKey, string> = {
+  title: 'Title (A–Z)',
+  updated: 'Recently edited',
+  rating: 'Highest rated',
+}
+
+// Numeric-aware, so "Тема 6" comes before "Тема 14"
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
+
+const SORTERS: Record<SortKey, (a: Book, b: Book) => number> = {
+  title: (a, b) => collator.compare(a.title, b.title),
+  updated: (a, b) => b.updatedAt - a.updatedAt,
+  rating: (a, b) => (b.rating ?? 0) - (a.rating ?? 0) || collator.compare(a.title, b.title),
+}
+
+// Remember the viewer's sort choice between visits (a convenience, so failures are ignored)
+function loadSort(): SortKey {
+  try {
+    const v = localStorage.getItem('library.sort')
+    if (v && v in SORT_LABELS) return v as SortKey
+  } catch {
+    /* storage unavailable */
+  }
+  return 'title'
+}
+function saveSort(v: SortKey) {
+  try {
+    localStorage.setItem('library.sort', v)
+  } catch {
+    /* storage unavailable */
+  }
+}
 
 export default function Library() {
   const { books } = useBooks()
   const [query, setQuery] = useState('')
   const [tag, setTag] = useState('')
   const [group, setGroup] = useState('')
-  const [status, setStatus] = useState<ReadingStatus | ''>('')
-  const [sort, setSort] = useState<SortKey>('updated')
+  const [sort, setSort] = useState<SortKey>(loadSort)
   const [message, setMessage] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const allTags = useMemo(
-    () => [...new Set((books ?? []).flatMap((b) => b.tags))].sort((a, b) => a.localeCompare(b)),
-    [books],
-  )
-
   const allGroups = useMemo(
-    () => [...new Set((books ?? []).map((b) => b.group).filter(Boolean))].sort() as string[],
+    () => [...new Set((books ?? []).map((b) => b.group).filter((g): g is string => Boolean(g)))].sort(collator.compare),
     [books],
   )
+  const allTags = useMemo(
+    () =>
+      [...new Set((books ?? []).filter((b) => !group || b.group === group).flatMap((b) => b.tags))].sort(
+        collator.compare,
+      ),
+    [books, group],
+  )
 
-  const visible = useMemo(() => {
-    const list = (books ?? []).filter(
-      (b) =>
-        (!group || (b.group ?? '') === group) &&
-        (!tag || b.tags.includes(tag)) &&
-        (!status || b.status === status) &&
-        matchesQuery(b, query),
-    )
-    const sorters: Record<SortKey, (a: (typeof list)[0], b: (typeof list)[0]) => number> = {
-      updated: (a, b) => b.updatedAt - a.updatedAt,
-      title: (a, b) => a.title.localeCompare(b.title),
-      rating: (a, b) => (b.rating ?? 0) - (a.rating ?? 0),
-      finished: (a, b) => (b.finishedAt ?? '').localeCompare(a.finishedAt ?? ''),
-    }
-    return list.sort(sorters[sort])
-  }, [books, query, group, tag, status, sort])
+  const visible = useMemo(
+    () =>
+      (books ?? [])
+        .filter((b) => (!group || b.group === group) && (!tag || b.tags.includes(tag)) && matchesQuery(b, query))
+        .sort(SORTERS[sort]),
+    [books, query, group, tag, sort],
+  )
 
   // Named groups alphabetically, ungrouped entries last
   const sections = useMemo(() => {
     const map = new Map<string, Book[]>()
     for (const b of visible) map.set(b.group ?? '', [...(map.get(b.group ?? '') ?? []), b])
-    return [...map].sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)))
+    return [...map].sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : collator.compare(a, b)))
   }, [visible])
-  const showHeadings = allGroups.length > 0
+
+  const filtered = Boolean(query || tag || group)
+  const clearFilters = () => {
+    setQuery('')
+    setTag('')
+    setGroup('')
+  }
 
   async function handleExport() {
     const blob = new Blob([await exportJson()], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `book-notes-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `study-notes-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -74,36 +106,55 @@ export default function Library() {
   if (books.length === 0) {
     return (
       <div className="empty">
+        <div className="empty-icon" aria-hidden>
+          📚
+        </div>
         <h1>Your library is empty</h1>
-        <p>Add a book you've read or a topic you're studying.</p>
-        <Link to="/books/new" className="button primary">
-          + Add
-        </Link>
-        <p className="muted small">
-          Have a backup?{' '}
-          <button className="link" onClick={() => fileInput.current?.click()}>
-            Import it
+        <p>Add a book you've read or a topic you're studying. You can write notes and flashcards for each one.</p>
+        <div className="row" style={{ justifyContent: 'center' }}>
+          <Link to="/books/new" className="btn btn-primary">
+            <Icon name="plus" size={16} /> New entry
+          </Link>
+          <button className="btn" onClick={() => fileInput.current?.click()}>
+            <Icon name="upload" size={16} /> Import backup
           </button>
-        </p>
+        </div>
         <HiddenFileInput inputRef={fileInput} onFile={handleImport} />
-        {message && <p className="muted">{message}</p>}
+        {message && <p className="small muted" style={{ marginTop: 16 }}>{message}</p>}
       </div>
     )
   }
 
   return (
     <>
-      <div className="toolbar">
-        <input
-          type="search"
-          placeholder="Search titles, summaries, quotes…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="grow"
-          autoFocus
-        />
+      <div className="page-header">
+        <h1>Library</h1>
+        <span className="muted small" style={{ paddingBottom: 4 }}>
+          {books.length} entr{books.length === 1 ? 'y' : 'ies'} ·{' '}
+          {books.reduce((n, b) => n + b.cards.length, 0)} flashcards
+        </span>
+      </div>
+
+      <div className="toolbar" role="search">
+        <label className="search">
+          <span className="sr-only">Search</span>
+          <Icon name="search" size={17} />
+          <input
+            type="search"
+            placeholder="Search titles, notes, quotes and flashcards…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
         {allGroups.length > 0 && (
-          <select value={group} onChange={(e) => setGroup(e.target.value)} aria-label="Group">
+          <select
+            value={group}
+            onChange={(e) => {
+              setGroup(e.target.value)
+              setTag('')
+            }}
+            aria-label="Filter by group"
+          >
             <option value="">All groups</option>
             {allGroups.map((g) => (
               <option key={g} value={g}>
@@ -112,79 +163,130 @@ export default function Library() {
             ))}
           </select>
         )}
-        <select value={status} onChange={(e) => setStatus(e.target.value as ReadingStatus | '')}>
-          <option value="">All statuses</option>
-          {Object.entries(STATUS_LABELS).map(([k, v]) => (
+        <select
+          value={sort}
+          onChange={(e) => {
+            setSort(e.target.value as SortKey)
+            saveSort(e.target.value as SortKey)
+          }}
+          aria-label="Sort by"
+        >
+          {Object.entries(SORT_LABELS).map(([k, v]) => (
             <option key={k} value={k}>
               {v}
             </option>
           ))}
         </select>
-        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-          <option value="updated">Recently edited</option>
-          <option value="finished">Recently finished</option>
-          <option value="title">Title A–Z</option>
-          <option value="rating">Highest rated</option>
-        </select>
       </div>
 
       {allTags.length > 0 && (
-        <div className="tags">
-          <button className={`tag ${tag === '' ? 'active' : ''}`} onClick={() => setTag('')}>
-            All
-          </button>
+        <div className="chips" aria-label="Filter by tag" style={{ marginBottom: 6 }}>
           {allTags.map((t) => (
-            <button key={t} className={`tag ${tag === t ? 'active' : ''}`} onClick={() => setTag(tag === t ? '' : t)}>
+            <button
+              key={t}
+              className={`chip ${tag === t ? 'active' : ''}`}
+              aria-pressed={tag === t}
+              onClick={() => setTag(tag === t ? '' : t)}
+            >
               {t}
             </button>
           ))}
         </div>
       )}
 
-      <p className="muted small">
-        {visible.length} of {books.length} entries
-      </p>
+      {filtered && (
+        <div className="toolbar-meta small muted">
+          <span aria-live="polite">
+            {visible.length} of {books.length} shown
+          </span>
+          <button className="link-btn small" onClick={clearFilters}>
+            Clear filters
+          </button>
+        </div>
+      )}
 
-      {sections.map(([name, list]) => (
-        <section key={name} className="group-section">
-          {showHeadings && (
-            <h2 className="group-heading">
-              {name || 'Ungrouped'} <span className="muted small">{list.length}</span>
-            </h2>
-          )}
-          <ul className="book-grid">
-            {list.map((b) => (
-              <li key={b.id}>
-                <Link to={`/books/${b.id}`} className="book-card">
-                  <Cover book={b} />
-                  <div>
-                    <strong>{b.title}</strong>
-                    {b.author && <div className="muted">{b.author}</div>}
-                    <Stars value={b.rating} />
-                    {b.takeaways[0] && <p className="small clamp">{b.takeaways[0]}</p>}
-                    {b.cards.length > 0 && (
-                      <p className="small muted">
-                        🗂 {b.cards.length} flashcard{b.cards.length === 1 ? '' : 's'}
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      {visible.length === 0 ? (
+        <div className="empty">
+          <h2>No matches</h2>
+          <p>Nothing matches your search or filters.</p>
+          <button className="btn" onClick={clearFilters}>
+            Clear filters
+          </button>
+        </div>
+      ) : (
+        sections.map(([name, list]) => (
+          <section key={name} className="group-section" aria-label={name || 'Ungrouped'}>
+            {(allGroups.length > 0 || sections.length > 1) && (
+              <h2 className="group-heading">
+                {name || 'Ungrouped'} <span className="count">{list.length}</span>
+              </h2>
+            )}
+            <ul className="entry-grid">
+              {list.map((b) => (
+                <li key={b.id}>
+                  <EntryCard book={b} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      )}
 
       <footer className="backup">
-        <span className="muted small">Notes are saved in data/book-notes.db. Export makes a portable JSON backup.</span>
-        <div>
-          <button onClick={handleExport}>Export</button>
-          <button onClick={() => fileInput.current?.click()}>Import</button>
+        <span className="muted small">
+          Saved in <code>data/book-notes.db</code>. Export a JSON copy as a backup.
+        </span>
+        <div className="row">
+          <button className="btn btn-sm" onClick={handleExport}>
+            <Icon name="download" size={15} /> Export
+          </button>
+          <button className="btn btn-sm" onClick={() => fileInput.current?.click()}>
+            <Icon name="upload" size={15} /> Import
+          </button>
         </div>
         <HiddenFileInput inputRef={fileInput} onFile={handleImport} />
-        {message && <p className="muted small">{message}</p>}
+        {message && (
+          <p className="small muted" role="status" style={{ width: '100%', margin: 0 }}>
+            {message}
+          </p>
+        )}
       </footer>
     </>
+  )
+}
+
+function EntryCard({ book: b }: { book: Book }) {
+  const snippet = b.takeaways[0] ?? b.author
+  return (
+    <article className="entry-card">
+      <Cover book={b} />
+      <div className="entry-body">
+        <Link to={`/books/${b.id}`} className="entry-title clamp-3">
+          {b.title}
+        </Link>
+        {b.author && b.takeaways[0] && <div className="entry-sub">{b.author}</div>}
+        {b.rating ? <Stars value={b.rating} /> : null}
+        {snippet && <p className="entry-snippet clamp-2">{snippet}</p>}
+        <div className="entry-footer">
+          <div className="chips grow" style={{ overflow: 'hidden', flexWrap: 'nowrap' }}>
+            {b.tags.slice(0, 2).map((t) => (
+              <span key={t} className="chip">
+                {t}
+              </span>
+            ))}
+          </div>
+          {b.cards.length > 0 && (
+            <Link
+              to={`/books/${b.id}/study`}
+              className="btn btn-sm"
+              aria-label={`Study ${b.cards.length} flashcards: ${b.title}`}
+            >
+              <Icon name="cards" size={15} /> Study {b.cards.length}
+            </Link>
+          )}
+        </div>
+      </div>
+    </article>
   )
 }
 
