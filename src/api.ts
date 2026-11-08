@@ -11,6 +11,11 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
+  if (res.status === 401) {
+    // Deployed version only: the session expired, so go to the sign-in page
+    window.location.href = '/login'
+    throw new Error('Not signed in')
+  }
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.error ?? `Request failed (${res.status})`)

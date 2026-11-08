@@ -48,3 +48,12 @@ Importing it twice adds the topics twice.
 | DELETE | `/api/books/:id` | delete |
 | GET | `/api/export` | JSON backup |
 | POST | `/api/import` | restore a backup (same book → updated, otherwise added) |
+
+## Deploying (Cloudflare Workers)
+
+The deployed app runs `worker/index.ts` (same API, on a D1 database) and is protected by one password.
+
+- Deploy: `npm run deploy` → https://diary.btodorov88.workers.dev
+- Set or change the password: `npx wrangler secret put APP_PASSWORD` (signs all devices out)
+- The cloud database (`diary-db`) is separate from the local `data/book-notes.db`.
+  To move data between them, use Export in one and Import in the other.
