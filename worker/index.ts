@@ -1,7 +1,7 @@
 /**
  * Cloudflare Worker for the deployed app: serves the built client (dist/) and the same /api as
- * server/index.ts, backed by D1 instead of a local SQLite file. Everything sits behind a single
- * password (the APP_PASSWORD secret).
+ * server/index.ts, backed by D1 instead of a local SQLite file. Anyone can read; adding, editing,
+ * deleting and importing need the password (the APP_PASSWORD secret).
  */
 import { parseDraft, parseImport, ValidationError } from '../server/validate.ts'
 import type { Book, BookDraft, ExportFile, ReadingStatus } from '../src/types.ts'
@@ -21,7 +21,10 @@ export default {
     if (url.pathname === '/login') {
       return request.method === 'POST' ? handleLogin(request, env.APP_PASSWORD) : loginPage()
     }
-    if (!(await checkSession(request, env.APP_PASSWORD))) {
+    // Reading is public; changing anything, or opening an edit page, needs the password
+    const isEditPage = url.pathname === '/books/new' || /^\/books\/[^/]+\/edit$/.test(url.pathname)
+    const needsSignIn = request.method !== 'GET' || isEditPage
+    if (needsSignIn && !(await checkSession(request, env.APP_PASSWORD))) {
       return url.pathname.startsWith('/api/')
         ? json({ error: 'Not signed in' }, 401)
         : Response.redirect(`${url.origin}/login`, 302)
