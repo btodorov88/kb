@@ -21,7 +21,7 @@ npm start       # production: serves the built app + API on http://localhost:518
 
 ## Seed data
 `seed/utp-exam.json` holds the 6 PhD exam topics (Теми 6, 22, 14, 17, 16, 20 — билети 1–3) from
-`UTP-izpit-temi.pdf`, with notes, key takeaways and 219 flashcards. Load it into an empty library with
+`UTP-izpit-temi.pdf`, with notes, key takeaways and 230 flashcards. Load it into an empty library with
 **Import** in the app, or:
 ```sh
 curl -X POST http://localhost:5180/api/import -H 'Content-Type: application/json' --data-binary @seed/utp-exam.json
